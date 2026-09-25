@@ -8,6 +8,7 @@
     "scheme": "expotemplate",
     "userInterfaceStyle": "automatic",
     "android": {
+      "package": "com.selvannv.private_notes",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./src/assets/images/android-icon-foreground.png",
