@@ -1,0 +1,123 @@
+name: Build App
+
+on:
+  workflow_dispatch:
+    inputs:
+      buildType:
+        type: choice
+        description: "Build type to run"
+        options:
+          - development
+          - preview
+          - production
+          - all
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  NODE_OPTIONS: --openssl-legacy-provider
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - name: development
+            profile: development
+            output: app-development.apk
+
+          - name: preview
+            profile: preview
+            output: app-preview.apk
+
+          - name: production
+            profile: production
+            output: app-production.aab
+
+    steps:
+      - name: 🏗 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏗 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: 📦 Install dependencies
+        run: pnpm install
+
+      - name: ⚡ Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.gradle/native
+            ~/.gradle/daemon
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: ⚡ EAS cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.eas
+          key: ${{ runner.os }}-eas-${{ hashFiles('package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-eas-
+
+      - name: Install EAS CLI
+        run: pnpm add -g eas-cli
+
+      - name: 🔨 Build ${{ matrix.profile }}
+        if: |
+          github.event.inputs.buildType == 'all' ||
+          github.event.inputs.buildType == matrix.profile
+
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+
+          eas build \
+            --platform android \
+            --profile ${{ matrix.profile }} \
+            --local \
+            --non-interactive \
+            --output ./${{ matrix.output }}
+
+      - name: 📦 Upload artifact
+        if: |
+          github.event.inputs.buildType == 'all' ||
+          github.event.inputs.buildType == matrix.profile
+
+        uses: actions/upload-artifact@v4
+
+        with:
+          name: ${{ matrix.profile }}-build
+          path: ./${{ matrix.output }}
+          retention-days: 7
+
+  release:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛠️ Temporary steps
+        run: echo "NO RELEASE JOB SETUP!"

@@ -1,0 +1,22 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "strict": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src",
+    "nativewind-env.d.ts",
+    "svg.d.ts",
+    "global.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
+}
